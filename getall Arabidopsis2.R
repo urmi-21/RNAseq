@@ -17,6 +17,7 @@ dbGetQuery(congeo, paste("select * from metaInfo", sep = ""))
 #maize: 4577
 #other filters taxon_id in (3702); platform='ILLUMINA';library_strategy='RNA-SEQ';library_layout LIKE 'PAIRED%';library_source='TRANSCRIPTOMIC'
 #for human #taxon ID 9606
+####Change TAXONID as necessary
 all_sra_data <-
   dbGetQuery(
     sra_con,
@@ -26,14 +27,14 @@ all_sra_data <-
     )
   )
 
-all_sra_data <-
-  dbGetQuery(
-    sra_con,
-    paste(
-      "select * from sra WHERE (taxon_id IN ('4577','381124','112001','381124','334825','4579','76912',) AND UPPER(platform) = 'ILLUMINA' AND UPPER(library_strategy) = 'RNA-SEQ' AND UPPER(library_layout) LIKE 'PAIRED%' AND UPPER(library_source) = 'TRANSCRIPTOMIC')",
-      sep = " "
-    )
-  )
+#all_sra_data <-
+#  dbGetQuery(
+#    sra_con,
+#    paste(
+#      "select * from sra WHERE (taxon_id IN ('4577','381124','112001','381124','334825','4579','76912',) AND UPPER(platform) = 'ILLUMINA' AND UPPER(library_strategy) = 'RNA-SEQ' AND UPPER(library_layout) LIKE 'PAIRED%' AND UPPER(library_source) = 'TRANSCRIPTOMIC')",
+#      sep = " "
+#    )
+#  )
 
 #retain only GSE ids
 gse_in_sra <- c()
