@@ -1,8 +1,11 @@
 #IMPORTANT: Before running make sure that none of the objects exist in current work space.
+rm(list=ls())
 library(tidyr) #for splitting gds table
 library(plyr) #for join
 setwd("~/work/urmi/geoscripts")
 library(SRAdb)
+#update sradb file
+#getSRAdbFile()
 sra_con <- dbConnect(SQLite(), 'SRAmetadb.sqlite')
 dbListTables(sra_con)
 dbGetQuery(sra_con, paste("select * from metaInfo", sep = " "))
@@ -17,12 +20,11 @@ dbGetQuery(congeo, paste("select * from metaInfo", sep = ""))
 #maize: 4577
 #other filters taxon_id in (3702); platform='ILLUMINA';library_strategy='RNA-SEQ';library_layout LIKE 'PAIRED%';library_source='TRANSCRIPTOMIC'
 #for human #taxon ID 9606
-####Change TAXONID as necessary
 all_sra_data <-
   dbGetQuery(
     sra_con,
     paste(
-      "select * from sra WHERE (taxon_id IN ('9606') AND UPPER(platform) = 'ILLUMINA' AND UPPER(library_strategy) = 'RNA-SEQ' AND UPPER(library_layout) LIKE 'PAIRED%' AND UPPER(library_source) = 'TRANSCRIPTOMIC')",
+      "select * from sra WHERE (taxon_id IN ('3702') AND UPPER(platform) = 'ILLUMINA' AND UPPER(library_strategy) = 'RNA-SEQ' AND UPPER(library_layout) LIKE 'PAIRED%' AND UPPER(library_source) = 'TRANSCRIPTOMIC')",
       sep = " "
     )
   )
@@ -31,7 +33,7 @@ all_sra_data <-
 #  dbGetQuery(
 #    sra_con,
 #    paste(
-#      "select * from sra WHERE (taxon_id IN ('4577','381124','112001','381124','334825','4579','76912',) AND UPPER(platform) = 'ILLUMINA' AND UPPER(library_strategy) = 'RNA-SEQ' AND UPPER(library_layout) LIKE 'PAIRED%' AND UPPER(library_source) = 'TRANSCRIPTOMIC')",
+#      "select * from sra WHERE (taxon_id IN ('4577','381124','112001','381124','334825','4579','76912','1980702','368615') AND UPPER(platform) = 'ILLUMINA' AND UPPER(library_strategy) = 'RNA-SEQ' AND UPPER(library_layout) LIKE 'PAIRED%' AND UPPER(library_source) = 'TRANSCRIPTOMIC')",
 #      sep = " "
 #    )
 #  )
@@ -136,13 +138,22 @@ for (i in 1:length(names(all_gsm))) {
 #step1 join gsm data with all_sra_data
 #we want inner join keep only those rows which are in both sra and geo and keep the filters
 #join_sra_gsm <- plyr::join(all_sra_data, all_gsm,by="gsm",type ="inner")
+#join type default (left) keep all sra data even with no match in geo
 join_sra_gsm <- plyr::join(all_sra_data, all_gsm,by="gsm")
 
 #step2 join gse data with all_sra_data
 #join_sra_gsm_gse <- plyr::join(join_sra_gsm, all_gse,by="gse",type ="inner")
 join_sra_gsm_gse <- plyr::join(join_sra_gsm, all_gse,by="gse")
 
-
+##replace all \t in each column of join_sra_gsm_gse
+for (col in colnames(join_sra_gsm_gse)){
+  print(col)
+  for (j in 1:length(join_sra_gsm_gse[[col]])){
+    #print (join_sra_gsm_gse[j,col])
+    join_sra_gsm_gse[j,col]=gsub("\t",";",join_sra_gsm_gse[j,col])
+  }
+    
+}
 
 #filter out unwanted columns
 keep <-
@@ -190,12 +201,14 @@ keep <-
 
 filterfinal<-join_sra_gsm_gse[,keep]
 #write to csv file
-write.csv(filterfinal, "final.csv", row.names=FALSE)
+write.csv(filterfinal, "US_AT_removedtabs.csv", row.names=FALSE)
+#write.table(filterfinal, "final.csv", row.names=FALSE)
 
 #debug
-rw<-dbGetQuery(sra_con, paste("select * from sra WHERE run_accession in ('SRR765452')", sep=" "))
+rw<-dbGetQuery(sra_con, paste("select * from sra WHERE run_accession in ('ERR1407268')", sep=" "))
 ##below is a problem
 #gse_gsm table doesn't map all gse_gsm belo gsm isn't in gse_gsm fin a solution to this.
 
 rs<-dbGetQuery(congeo, paste("select * from gsm WHERE gsm in ('GSM1868811')", sep=" "))
 rs2<-dbGetQuery(congeo, paste("select * from gse_gsm WHERE gsm in ('GSM1868811')", sep=" "))
+
