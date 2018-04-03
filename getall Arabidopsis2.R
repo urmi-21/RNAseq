@@ -199,9 +199,18 @@ keep <-
     
   )
 
+
 filterfinal<-join_sra_gsm_gse[,keep]
+#remove . from col names otherwise MOG wont read because of No2 library
+this_cols<-colnames(filterfinal)
+for (j in 1:length(this_cols)){
+  #print (join_sra_gsm_gse[j,col])
+  this_cols[j]=gsub('[.]','_',this_cols[j],fixed = F)
+}
+colnames(filterfinal)<-this_cols
 #write to csv file
 write.csv(filterfinal, "US_AT_removedtabs.csv", row.names=FALSE)
+write_tsv(filterfinal, "US_AT_removedtabs.txt")
 #write.table(filterfinal, "final.csv", row.names=FALSE)
 
 #debug
