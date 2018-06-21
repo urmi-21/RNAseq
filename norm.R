@@ -14,7 +14,7 @@ file <- paste(IDLIST,"",sep="")
 names(file) <- run$V1
 #import salmon file
 #gives error now fixed with importer function
-txi.salmon <- tximport(file, type = "salmon", txOut = TRUE.tx2gene = tx2gene, importer = function(x) read_tsv(x,col_types = list(col_character(), col_double(), col_double(), col_double(), col_double()  )))
+txi.salmon <- tximport(file, type = "salmon", txOut = TRUE, tx2gene = tx2gene, importer = function(x) read_tsv(x,col_types = list(col_character(), col_double(), col_double(), col_double(), col_double()  )))
 txi.salmon_scaledTPM <- tximport(file, countsFromAbundance="scaledTPM", type = "salmon",txOut = TRUE, tx2gene = tx2gene, importer = function(x) read_tsv(x,col_types = list(col_character(), col_double(), col_double(), col_double(), col_double()  )))
 txi.salmon_lenscaledTPM <- tximport(file, countsFromAbundance="lengthScaledTPM", type = "salmon",txOut = TRUE, tx2gene = tx2gene, importer = function(x) read_tsv(x,col_types = list(col_character(), col_double(), col_double(), col_double(), col_double()  )))
 df <- txi.salmon$counts
