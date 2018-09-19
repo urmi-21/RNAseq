@@ -97,7 +97,6 @@ boxplot(logcpm,outline=F,xaxt="n",range=0.5)
  #urmi 14 sept 2018
 #Ref: https://bioconductor.org/packages/devel/bioc/vignettes/tximport/inst/doc/tximport.html
 # We can avoid gene-level summarization by setting txOut=TRUE, giving the original transcript level estimates as a list of matrices.
-
-txi.salmon <- tximport(files, type = "salmon",countsFromAbundance="scaledTPM", txOut = TRUE)                         
+txi.salmon <- tximport(file, type = "salmon",countsFromAbundance="scaledTPM", txOut = TRUE)                         
                                     
            
