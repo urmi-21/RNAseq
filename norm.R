@@ -93,3 +93,11 @@ boxplot(y_grp_norm$counts,outline=F,xaxt="n",range=0.5)
 cpm <- cpm(y_norm,normalized.lib.sizes=T)
 logcpm <- log(cpm+1)
 boxplot(logcpm,outline=F,xaxt="n",range=0.5)
+                                    
+ #urmi 14 sept 2018
+#Ref: https://bioconductor.org/packages/devel/bioc/vignettes/tximport/inst/doc/tximport.html
+# We can avoid gene-level summarization by setting txOut=TRUE, giving the original transcript level estimates as a list of matrices.
+
+tximport(files, type = "salmon",countsFromAbundance="scaledTPM", txOut = TRUE)                         
+                                    
+           
