@@ -101,4 +101,8 @@ txi.salmon <- tximport(file, type = "salmon",countsFromAbundance="scaledTPM", tx
 #use importer function for parsing failiures
 txi.salmon_scaledTPM <- tximport(file, countsFromAbundance="scaledTPM", type = "salmon",txOut = TRUE, importer = function(x) read_tsv(x,col_types = list(col_character(), col_double(), col_double(), col_double(), col_double() )))
 txi.salmon <- tximport(file, type = "salmon",txOut = TRUE, importer = function(x) read_tsv(x,col_types = list(col_character(), col_double(), col_double(), col_double(), col_double() )))
-           
+
+
+write.csv(cpm,"cpm.csv")
+write.csv(cpm_scaledTPM,"cpm_scaledTPM.csv")
+
