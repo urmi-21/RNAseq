@@ -221,3 +221,4 @@ rw<-dbGetQuery(sra_con, paste("select * from sra WHERE run_accession in ('ERR140
 rs<-dbGetQuery(congeo, paste("select * from gsm WHERE gsm in ('GSM1868811')", sep=" "))
 rs2<-dbGetQuery(congeo, paste("select * from gse_gsm WHERE gsm in ('GSM1868811')", sep=" "))
 
+ 
