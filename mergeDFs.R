@@ -21,4 +21,8 @@ setwd("~/Downloads/RNAseqDB/RNAseqDB/data/normalized/data_files")
 
 df <- list.files(full.names = TRUE) %>% lapply(read_tsv)  %>% reduce(full_join)
 
+#get no NA values do inner join
+df <- list.files(full.names = TRUE,pattern = "*.txt") %>% lapply(read_tsv)  %>% reduce(inner_join)
+which(is.na(df))
+
 write.csv(df,"allCombined.csv",row.names = F)
