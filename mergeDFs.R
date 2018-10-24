@@ -25,4 +25,8 @@ df <- list.files(full.names = TRUE) %>% lapply(read_tsv)  %>% reduce(full_join)
 df <- list.files(full.names = TRUE,pattern = "*.txt") %>% lapply(read_tsv)  %>% reduce(inner_join)
 which(is.na(df))
 
-write.csv(df,"allCombined.csv",row.names = F)
+#write.csv(df,"allCombined.csv",row.names = F)
+#faster
+library("data.table", lib.loc="~/R/win-library/3.4")
+fwrite(df,file ="allCombined.csv", row.names = )
+
