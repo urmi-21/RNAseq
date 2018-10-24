@@ -28,5 +28,5 @@ which(is.na(df))
 #write.csv(df,"allCombined.csv",row.names = F)
 #faster
 library("data.table", lib.loc="~/R/win-library/3.4")
-fwrite(df,file ="allCombined.csv", row.names = )
+fwrite(df,file ="allCombined.csv", row.names = F)
 
