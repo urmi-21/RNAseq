@@ -33,16 +33,29 @@ fwrite(df,file ="allCombined.csv", row.names = F)
 #plot hist of all the samples
 df <- list.files(full.names = TRUE,pattern = "*.txt") %>% lapply(read_tsv) %>% reduce(inner_join)
 which(is.na(df))
+
+#remove info cols
+df2<-df[,c(3:dim(df)[2])]
 #order names
-df<-df[,order(names(df))]
+df2<-df2[,order(names(df2))]
+#ggplot(stack(df_s), aes(x = ind, y = log(values))) +  geom_boxplot()+theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
-#subset
-df_s<-df[,c(3:50)]
 
-ggplot(stack(df_s), aes(x = ind, y = log(values))) +  geom_boxplot()+theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
-for(i in seq(3, dim(df)[2], by = 50)){
+plotlist = list()
+k=1
+for(i in seq(3, dim(df2)[2], by = 50)){
+  df_s<-df2[,c(i:min(i+50,dim(df2)[2]))]
+  #print(colnames(df[,c(i:min(i+50,dim(df)[2]))]))
+  p<-ggplot(stack(df_s), aes(x = ind, y = log(values))) +  geom_boxplot()+theme(axis.text.x = element_text(angle = 90, hjust = 1))
   
-  print(colnames(df[,c(i:min(i+50,dim(df)[2]))]))
-  
+  plotlist[[k]]=p
+  k=k+1
 }
+
+pdf("countsPlots.pdf")
+for (i in 1:length(plotlist)){
+  write(i, stderr())
+  print(plotlist[[i]])
+}
+dev.off()
+
