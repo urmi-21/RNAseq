@@ -34,6 +34,9 @@ fwrite(df,file ="allCombined.csv", row.names = F)
 df <- list.files(full.names = TRUE,pattern = "*.txt") %>% lapply(read_tsv) %>% reduce(inner_join)
 which(is.na(df))
 #order names
+df<-df[,order(names(df))]
+
+#subset
 df_s<-df[,c(3:50)]
 
 ggplot(stack(df_s), aes(x = ind, y = log(values))) +  geom_boxplot()+theme(axis.text.x = element_text(angle = 90, hjust = 1))
