@@ -30,3 +30,16 @@ which(is.na(df))
 library("data.table", lib.loc="~/R/win-library/3.4")
 fwrite(df,file ="allCombined.csv", row.names = F)
 
+#plot hist of all the samples
+df <- list.files(full.names = TRUE,pattern = "*.txt") %>% lapply(read_tsv) %>% reduce(inner_join)
+which(is.na(df))
+#order names
+df_s<-df[,c(3:50)]
+
+ggplot(stack(df_s), aes(x = ind, y = log(values))) +  geom_boxplot()+theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+for(i in seq(3, dim(df)[2], by = 50)){
+  
+  print(colnames(df[,c(i:min(i+50,dim(df)[2]))]))
+  
+}
