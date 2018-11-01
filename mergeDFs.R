@@ -2,6 +2,7 @@ library(readr)
 library(magrittr)
 library(dplyr)
 library(purrr)
+setwd("~/Downloads/RNAseqDB/RNAseqDB/data/expected_count")
 
 brca_rsem_fpkm_tcga_t <- read_delim("~/Downloads/RNAseqDB/RNAseqDB/data/normalized/brca-rsem-fpkm-tcga-t.txt","\t", escape_double = FALSE, trim_ws = TRUE)
 brca_rsem_fpkm_tcga<- read_delim("~/Downloads/RNAseqDB/RNAseqDB/data/normalized/brca-rsem-fpkm-tcga.txt","\t", escape_double = FALSE, trim_ws = TRUE)
@@ -19,16 +20,38 @@ write.csv(joined3,"brca_cerv_combined.csv",row.names = F)
 
 setwd("~/Downloads/RNAseqDB/RNAseqDB/data/normalized/data_files")
 
-df <- list.files(full.names = TRUE) %>% lapply(read_tsv)  %>% reduce(full_join)
+#df <- list.files(full.names = TRUE) %>% lapply(read_tsv)  %>% reduce(full_join)
 
-#get no NA values do inner join
-df <- list.files(full.names = TRUE,pattern = "*.txt") %>% lapply(read_tsv)  %>% reduce(inner_join)
+
+
+#plot hist of all the samples
+df <- list.files(full.names = TRUE,pattern = "*.txt") %>% lapply(read_tsv) %>% reduce(inner_join)
 which(is.na(df))
+
+##remove duplicated columns. these cols are ambiguous. first two matches are false
+toremove <- names(df)[grepl("_",names(df))]
+toremove<-toremove[3:length(toremove)]
+tr<-c()
+for(s in toremove){
+  tr<-c(tr,unlist(strsplit(s,"_"))[1])
+}
+tr<-unique(tr)
+df2<-df[,!(names(df) %in% toremove)]
+df2<-df2[,!(names(df2) %in% tr)]
+
+##remove GTEX columns
+toremove <- names(df2)[grepl("GTEX",names(df2))]
+df2<-df[,!(names(df) %in% toremove)]
+
+##only GTEX data
+
+dfgtex<-df[,(names(df) %in% c(names(df[1:2]),toremove))]
 
 #write.csv(df,"allCombined.csv",row.names = F)
 #faster
-library("data.table", lib.loc="~/R/win-library/3.4")
-fwrite(df,file ="allCombined.csv", row.names = F)
+library("data.table")
+fwrite(dfgtex,file ="allGTEXExpectedCts.csv", row.names = F)
+
 
 #plot hist of all the samples
 df <- list.files(full.names = TRUE,pattern = "*.txt") %>% lapply(read_tsv) %>% reduce(inner_join)
