@@ -6,3 +6,5 @@ for f in $(ls *tcga-t.txt); do head -1 $f | tr "\t" "\n" | tail -n +3 >> tumorSa
 touch notumorSamps
 for f in $(ls *tcga.txt); do head -1 $f | tr "\t" "\n" | tail -n +3 >> notumorSamps; done
 
+touch gtexSamps
+for f in $(ls *gtex.txt); do head -1 $f | tr "\t" "\n" | tail -n +3 >> gtexSamps; done
