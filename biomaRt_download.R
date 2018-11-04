@@ -24,4 +24,4 @@ myAttlist<-c("ensembl_gene_id","description","chromosome_name","start_position",
 geneMetadata<-getBM(attributes= myAttlist,filters=c("hgnc_symbol"),values=list(geneSymbols), mart=mart)
 
 #aggregate repeated cols
-geneMetadata_agg<-aggregate(geneMetadata[,2:20], list(geneMetadata[,1]), function(x) paste0(unique(x)))
+geneMetadata_agg<-aggregate(geneMetadata[,2:20], list(geneMetadata[,1]), function(x) paste0(unique(x),collapse = ";"))
