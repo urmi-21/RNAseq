@@ -1,3 +1,4 @@
+
 #if (!requireNamespace("BiocManager", quietly = TRUE)){
 #  install.packages("BiocManager")
 #}
@@ -22,4 +23,5 @@ chrom=c(17,20,"Y")
 myAttlist<-c("ensembl_gene_id","description","chromosome_name","start_position","end_position","strand","transcript_count","percentage_gene_gc_content","gene_biotype","source","go_id","name_1006","definition_1006","go_linkage_type","namespace_1003","goslim_goa_accession","goslim_goa_description","arrayexpress","hgnc_symbol","kegg_enzyme")
 geneMetadata<-getBM(attributes= myAttlist,filters=c("hgnc_symbol"),values=list(geneSymbols), mart=mart)
 
-
+#aggregate repeated cols
+geneMetadata_agg<-aggregate(geneMetadata[,2:20], list(geneMetadata[,1]), function(x) paste0(unique(x)))
