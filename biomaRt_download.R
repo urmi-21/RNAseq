@@ -25,3 +25,22 @@ geneMetadata<-getBM(attributes= myAttlist,filters=c("hgnc_symbol"),values=list(g
 
 #aggregate repeated cols
 geneMetadata_agg<-aggregate(geneMetadata[,2:20], list(geneMetadata[,1]), function(x) paste0(unique(x),collapse = ";"))
+
+                            
+#read hgnc data
+hgnc_complete_set <- read_delim("hgnc_complete_set.txt", 
+                                "\t", escape_double = FALSE, col_types = cols(alias_symbol = col_skip(),  rna_central_ids = col_skip()), trim_ws = TRUE)
+#hgnc columns to keep
+toKeep<-c("hgnc_id","symbol","name","locus_group",	"locus_type"	,"gene_family_id","ensembl_gene_id",	"refseq_accession",	"ccds_id",	"uniprot_ids",	"pubmed_id",	"omim_id")
+hgnc_complete_set<-hgnc_complete_set[,toKeep]
+
+names(hgnc_complete_set)
+names(hgnc_complete_set)[2]<-"hgnc_symbol"
+names(allNormalizedTCGA)[1]<-"hgnc_symbol"
+joinedDF<-plyr::join(allNormalizedTCGA,hgnc_complete_set,type="left")
+#rearrange names
+newOrder<-names(joinedDF)[1:2]
+newOrder<-c(head(names(joinedDF),2),tail(names(joinedDF),46),names(joinedDF)[3:(length(names(joinedDF))-46)])
+joinedDF<-joinedDF[,newOrder]
+
+fwrite(joinedDF,file ="allNormalizedTCGA_hgncdata.csv", row.names = F)
