@@ -129,16 +129,16 @@ for (i in 1:length(plotlist)){
   print(plotlist[[i]])
 }
 dev.off()
-
+#plot non enst
 plotlist = list()
 k=1
-for(i in seq(2, dim(df_TPM_enst)[2], by = 200)){
-  df_s<-df_TPM_enst[,c(i:min(i+200,dim(df_TPM_enst)[2]))]+1
+for(i in seq(2, dim(df_TPM_nonenst)[2], by = 200)){
+  df_s<-df_TPM_nonenst[,c(i:min(i+200,dim(df_TPM_nonenst)[2]))]+1
   p<-ggplot(data=stack(df_s), aes(x=ind, y=(values))) + geom_crossbar(stat="summary", fun.y=data_summary, fun.ymax=getlogmax, fun.ymin=getlogmin) +theme(axis.text.x = element_text(angle = 90, hjust = 1))
   plotlist[[k]]=p
   k=k+1
 }
-pdf("RawTPMPlots_Enst.pdf")
+pdf("RawTPMPlots_NonEnst.pdf")
 for (i in 1:length(plotlist)){
   write(i, stderr())
   print(plotlist[[i]])
