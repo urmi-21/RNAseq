@@ -4,6 +4,11 @@ library(edgeR)
 library(tidyverse)
 library(magrittr)
 library(ggplot2)
+
+library('seluth')
+library('wasabi')
+library("NOISeq", lib.loc="~/R/win-library/3.5")
+
 setwd("C:/Users/mrbai/Desktop/normrandomTest")
 memory.limit(size=56000)
 
@@ -186,7 +191,71 @@ gene <- read.csv("transcript_names.txt")
 tx2gene <- data.frame(GENEID=gene,TXNAME=gene)
 #import run ID (SRR)
 run <- read.csv("runs.txt",header=F)
+#remove with na values
+run<- as.data.frame(run$V1[ !(run$V1 %in% c("SRR363862","SRR363862"))])
+names(run)<-c("V1")
 IDLIST <- as.character(run$V1)
 file <- paste(IDLIST,"",sep="")
 names(file) <- run$V1
 txi.salmon <- tximport(file, type = "salmon", txOut = TRUE, tx2gene = tx2gene, importer = function(x) read_tsv(x,col_types = list(col_character(), col_double(), col_double(), col_double(), col_double()  )))
+
+##using egder
+cts <- txi.salmon$counts
+normMat <- txi.salmon$length
+normMat <- normMat/exp(rowMeans(log(normMat)))
+
+o <- log(calcNormFactors(cts/normMat)) + log(colSums(cts/normMat))
+y <- DGEList(cts)
+y <- scaleOffset(y, t(t(log(normMat)) + o))
+#store srr by lib size
+libsizesOrderd<-sm[order(sm$lib.size),]
+# filtering
+keep <- filterByExpr(y)
+y <- y[keep, ]
+# y is now ready for estimate dispersion functions see edgeR User's Guide
+y$samples
+
+yNF <- calcNormFactors(y)
+head(yNF$samples)
+head(y$samples)
+yNFwzp <- calcNormFactors(y,method="TMMwzp")
+head(yNFwzp$samples)
+yNFuq <- calcNormFactors(y,method="upperquartile")
+head(yNFuq$samples)
+
+##example of norffactors
+sampexp <- matrix( rpois(10000, lambda=5), nrow=100 )
+snf<-calcNormFactors(sampexp)
+sampexp_norm<-sampexp %*% diag(snf)
+boxplot(sampexp)
+boxplot(sampexp_norm)
+
+
+
+
+
+#using noiseq
+head(cts)
+myfactors<-run
+nsData<-readData(data = cts,factors = myfactors)
+#### ENST00000378936 is duplicated##########
+length(rownames(cts))
+length(unique(rownames(cts)))
+#sum the repeated transcript
+t(sapply(by(cts,rownames(cts),colSums),identity))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
