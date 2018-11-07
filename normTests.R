@@ -44,6 +44,9 @@ df_TPM<-df[,tpmCols]
 data_summary <- function(x) {
   mu <- mean(x)
   med<-median(x)
+  if(is.na(mu)){
+    mu<-1
+  }
   #print(paste("mean is",log(mu)))
   return(c(y=log(mu),ymax=log(med),ymin=log(med)))
 }
@@ -58,18 +61,31 @@ getlogmin<- function(x){
 
 newdf<-df_TPM[,2:3]+1
 
-ggplot(data=stack(newdf), aes(x=ind, y=(values))) + geom_crossbar(stat="summary", fun.y=data_summary, fun.ymax=getlogmax, fun.ymin=getlogmin) 
+ggplot(data=stack(newdf), aes(x=ind, y=(values))) + geom_crossbar(stat="summary", fun.y=data_summary, fun.ymax=getlogmax, fun.ymin=getlogmin,inherit.aes = TRUE)+ geom_hline(aes(yintercept = log(mean(values))),size=1)  
+
+#toplot meanlines
+meanlines<-log(as.data.frame((apply((newdf),MARGIN=2,FUN=mean))))
+names(meanlines)<-c("value")
+meanlines<-meanlines%>%mutate(num=row_number(value))
+
+ggplot(data=stack(newdf), aes(x=ind, y=(values))) + geom_crossbar(stat="summary", fun.y=data_summary, fun.ymax=getlogmax, fun.ymin=getlogmin)+geom_segment(data=meanlines,aes(x=num-0.45,xend=num+0.45,y=value,yend=value),inherit.aes=FALSE,color="Red",size=1.5)
 
 ggplot(data=stack(newdf), aes(x=ind, y=log(values))) +   geom_violin() 
 
+##################Plot to File#################################
 
 plotlist = list()
 k=1
 for(i in seq(2, dim(df_TPM)[2], by = 200)){
   df_s<-df_TPM[,c(i:min(i+200,dim(df_TPM)[2]))]+1
-   #p<-ggplot(stack(df_s), aes(x = ind, y = log(values))) +  geom_boxplot(aes(middle = mean(values)),coef = 6) +theme(axis.text.x = element_text(angle = 90, hjust = 1))
-   p<-ggplot(data=stack(df_s), aes(x=ind, y=(values))) + geom_crossbar(stat="summary", fun.y=data_summary, fun.ymax=getlogmax, fun.ymin=getlogmin) +theme(axis.text.x = element_text(angle = 90, hjust = 1))
-   plotlist[[k]]=p
+  #toplot meanlines
+  meanlines<-log((as.data.frame((apply((df_s),MARGIN=2,FUN=mean)))))
+  names(meanlines)<-c("value")
+  meanlines[is.na(meanlines)] <- 0
+  meanlines<-meanlines%>%mutate(num=row_number(value))
+  meanlines$num<-as.numeric(rownames(meanlines))
+  p<-ggplot(data=stack(df_s), aes(x=ind, y=(values))) + geom_crossbar(stat="summary", fun.y=data_summary, fun.ymax=getlogmax, fun.ymin=getlogmin)+geom_segment(data=meanlines,aes(x=num-0.25,xend=num+0.25,y=value,yend=value),inherit.aes=FALSE,color="Red",size=1.5) +theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  plotlist[[k]]=p
   k=k+1
 }
 
@@ -86,18 +102,24 @@ bases<-bases %>% mutate(srr=paste("TPM_",run_accession,sep = ""))
 bases <- bases[bases$srr %in% names(df_TPM),]
 bases <- bases[order(bases$bases),]
 
-df_TPM_sorted<-df_TPM[,bases$srr]
+
+df_TPM_sorted<-df_TPM[,c('Name',bases$srr)]
 
 plotlist = list()
 k=1
-for(i in seq(2, dim(df_TPM_sorted)[2], by = 50)){
-  df_s<-df_TPM_sorted[,c(i:min(i+50,dim(df_TPM_sorted)[2]))]+1 #add 1 to avoid inf
-  p<-ggplot(data=stack(df_s), aes(x=ind, y=(values))) + geom_crossbar(stat="summary", fun.y=data_summary, fun.ymax=getlogmax, fun.ymin=getlogmin) +theme(axis.text.x = element_text(angle = 90, hjust = 1))
+for(i in seq(2, dim(df_TPM_sorted)[2], by = 200)){
+  df_s<-df_TPM_sorted[,c(i:min(i+200,dim(df_TPM_sorted)[2]))]+1 #add 1 to avoid inf
+  meanlines<-log((as.data.frame((apply((df_s),MARGIN=2,FUN=mean)))))
+  names(meanlines)<-c("value")
+  meanlines[is.na(meanlines)] <- 0
+  meanlines<-meanlines%>%mutate(num=row_number(value))
+  meanlines$num<-as.numeric(rownames(meanlines))
+  p<-ggplot(data=stack(df_s), aes(x=ind, y=(values))) + geom_crossbar(stat="summary", fun.y=data_summary, fun.ymax=getlogmax, fun.ymin=getlogmin)+geom_segment(data=meanlines,aes(x=num-0.25,xend=num+0.25,y=value,yend=value),inherit.aes=FALSE,color="Red",size=1.5) +theme(axis.text.x = element_text(angle = 90, hjust = 1))
   plotlist[[k]]=p
   k=k+1
 }
 
-pdf("RawTPMPlotsSortedBase_50.pdf")
+pdf("RawTPMPSortedBase.pdf")
 for (i in 1:length(plotlist)){
   write(i, stderr())
   print(plotlist[[i]])
@@ -117,28 +139,39 @@ df_TPM_nonenst<-df_TPM_nonenst[,c('Name',bases$srr)]
 
 plotlist = list()
 k=1
-for(i in seq(2, dim(df_TPM_enst)[2], by = 200)){
-  df_s<-df_TPM_enst[,c(i:min(i+200,dim(df_TPM_enst)[2]))]+1
-  p<-ggplot(data=stack(df_s), aes(x=ind, y=(values))) + geom_crossbar(stat="summary", fun.y=data_summary, fun.ymax=getlogmax, fun.ymin=getlogmin) +theme(axis.text.x = element_text(angle = 90, hjust = 1))
+for(i in seq(2, dim(df_TPM_enst)[2], by = 50)){
+  df_s<-df_TPM_enst[,c(i:min(i+50,dim(df_TPM_enst)[2]))]+1
+  meanlines<-log((as.data.frame((apply((df_s),MARGIN=2,FUN=mean)))))
+  names(meanlines)<-c("value")
+  meanlines[is.na(meanlines)] <- 0
+  meanlines<-meanlines%>%mutate(num=row_number(value))
+  meanlines$num<-as.numeric(rownames(meanlines))
+  p<-ggplot(data=stack(df_s), aes(x=ind, y=(values))) + geom_crossbar(stat="summary", fun.y=data_summary, fun.ymax=getlogmax, fun.ymin=getlogmin)+geom_segment(data=meanlines,aes(x=num-0.25,xend=num+0.25,y=value,yend=value),inherit.aes=FALSE,color="Red",size=1.5) +theme(axis.text.x = element_text(angle = 90, hjust = 1))
   plotlist[[k]]=p
   k=k+1
 }
-pdf("RawTPMPlots_Enst.pdf")
+pdf("RawTPMPlots_Enst_50.pdf")
 for (i in 1:length(plotlist)){
   write(i, stderr())
   print(plotlist[[i]])
 }
 dev.off()
+
 #plot non enst
 plotlist = list()
 k=1
-for(i in seq(2, dim(df_TPM_nonenst)[2], by = 200)){
-  df_s<-df_TPM_nonenst[,c(i:min(i+200,dim(df_TPM_nonenst)[2]))]+1
-  p<-ggplot(data=stack(df_s), aes(x=ind, y=(values))) + geom_crossbar(stat="summary", fun.y=data_summary, fun.ymax=getlogmax, fun.ymin=getlogmin) +theme(axis.text.x = element_text(angle = 90, hjust = 1))
+for(i in seq(2, dim(df_TPM_nonenst)[2], by = 50)){
+  df_s<-df_TPM_nonenst[,c(i:min(i+50,dim(df_TPM_nonenst)[2]))]+1
+  meanlines<-log((as.data.frame((apply((df_s),MARGIN=2,FUN=mean)))))
+  names(meanlines)<-c("value")
+  meanlines[is.na(meanlines)] <- 0
+  meanlines<-meanlines%>%mutate(num=row_number(value))
+  meanlines$num<-as.numeric(rownames(meanlines))
+  p<-ggplot(data=stack(df_s), aes(x=ind, y=(values))) + geom_crossbar(stat="summary", fun.y=data_summary, fun.ymax=getlogmax, fun.ymin=getlogmin)+geom_segment(data=meanlines,aes(x=num-0.25,xend=num+0.25,y=value,yend=value),inherit.aes=FALSE,color="Red",size=1.5) +theme(axis.text.x = element_text(angle = 90, hjust = 1))
   plotlist[[k]]=p
   k=k+1
 }
-pdf("RawTPMPlots_NonEnst.pdf")
+pdf("RawTPMPlots_NonEnst_50.pdf")
 for (i in 1:length(plotlist)){
   write(i, stderr())
   print(plotlist[[i]])
