@@ -12,38 +12,46 @@ library("NOISeq", lib.loc="~/R/win-library/3.5")
 setwd("C:/Users/mrbai/Desktop/normrandomTest")
 memory.limit(size=56000)
 
-#real un normalized tpms an plot boxplots
-changeNames<-function (thisList){
-  thissuff<-paste(c("_", fnames$fname[ind]), collapse = "")
-  #ind=ind+1
-  assign("ind",ind+1,envir = globalenv())
-  #print(ind)
-  #print(thissuff)
-  names(thisList)<-c("Name", paste(c("Length", thissuff), collapse = ""), paste(c("EffectiveLength", thissuff), collapse = ""),paste(c("TPM", thissuff), collapse = ""),paste(c("NumReads", thissuff), collapse = ""))
-  if(ind>2){
-    thisList[,3:5]
-  }else{
-    thisList
+
+########################Function defns############################################################
+
+plotnSave<-function(expdf,start,x,fname){
+  #expdf df object
+  #start start from this column, start=1 if there are no non data columns
+  #x num of plots on one page
+  #fname filename to save 
+  plotlist = list()
+  k=1
+  for(i in seq(start, dim(expdf)[2], by = x)){
+   
+    colrange<-c(i:min(i+x,dim(expdf)[2]))
+   # colrange
+    df_s<-expdf[,c(colrange)]+1
+    meanlines<-log((as.data.frame((apply((df_s),MARGIN=2,FUN=mean)))))
+    names(meanlines)<-c("value")
+    meanlines[is.na(meanlines)] <- 0
+    meanlines<-meanlines%>%mutate(num=row_number(value))
+    meanlines$num<-as.numeric(rownames(meanlines))
+    #3rd qt
+    q3Lines<-log(as.data.frame((apply((df_s),MARGIN=2,FUN=qt3))))
+    names(q3Lines)<-c("value")
+    q3Lines[is.na(q3Lines)] <- 0
+    q3Lines<-q3Lines%>%mutate(num=row_number(value))
+    q3Lines$num<-as.numeric(rownames(q3Lines))
+    
+    p<-ggplot(data=stack(df_s), aes(x=ind, y=(values))) + geom_crossbar(stat="summary", fun.y=data_summary, fun.ymax=getlogmax, fun.ymin=getlogmin)+geom_segment(data=meanlines,aes(x=num-0.45,xend=num+0.45,y=value,yend=value),inherit.aes=FALSE,color="Red",size=1.5)+geom_segment(data=q3Lines,aes(x=num-0.45,xend=num+0.45,y=value,yend=value),inherit.aes=FALSE,color="Green",size=1.5)+scale_y_continuous(breaks=seq(0,20,1))+theme(axis.text.x = element_text(angle = 90, hjust = 1))
+    
+    plotlist[[k]]=p
+    k=k+1
   }
   
+  pdf(fname)
+  for (i in 1:length(plotlist)){
+    write(i, stderr())
+    print(plotlist[[i]])
+  }
+  dev.off()
 }
-ind<<-1
-fnames<-as.data.frame(list.files(full.names = TRUE,pattern = "SRR*"))
-names(fnames)<-c("fname")
-fnames<-fnames %>% mutate(fname=str_replace_all(fname, "[^[:alnum:]]", ""))
-
-df <- list.files(full.names = TRUE,pattern = "SRR*") %>% lapply(read_tsv) %>% lapply(changeNames) %>% reduce(cbind)
-
-tpmCols<- names(df)[grepl("Name|TPM",names(df))]
-df_TPM<-df[,tpmCols]
-
-#plot histograms for tpms
-#ggplot(stack(df_TPM[1:194]), aes(x = ind, y = values)) +  geom_boxplot()
-
-
-
-
-
 
 # function to produce summary statistics (mean and +/- sd), as required for ggplot2
 data_summary <- function(x) {
@@ -63,136 +71,93 @@ getlogmax<- function(x){
 getlogmin<- function(x){
   return(c(y=log(min(x))))
 }
+qt3<-function(x){
+  return(quantile(x,na.rm=T)[4])
+}
 
-newdf<-df_TPM[,2:3]+1
+#real un normalized tpms an plot boxplots
+changeNames<-function (thisList){
+  thissuff<-paste(c("_", fnames$fname[ind]), collapse = "")
+  #ind=ind+1
+  assign("ind",ind+1,envir = globalenv())
+  #print(ind)
+  #print(thissuff)
+  names(thisList)<-c("Name", paste(c("Length", thissuff), collapse = ""), paste(c("EffectiveLength", thissuff), collapse = ""),paste(c("TPM", thissuff), collapse = ""),paste(c("NumReads", thissuff), collapse = ""))
+  if(ind>2){
+    thisList[,3:5]
+  }else{
+    thisList
+  }
+  
+}
+
+########################End function defn############################################################
+
+##################################Read raw data files##############################
+ind<<-1
+fnames<-as.data.frame(list.files(full.names = TRUE,pattern = "SRR*"))
+names(fnames)<-c("fname")
+fnames<-fnames %>% mutate(fname=str_replace_all(fname, "[^[:alnum:]]", ""))
+
+df <- list.files(full.names = TRUE,pattern = "SRR*") %>% lapply(read_tsv) %>% lapply(changeNames) %>% reduce(cbind)
+
+tpmCols<- names(df)[grepl("Name|TPM",names(df))]
+df_TPM<-df[,tpmCols]
+
+
+##################Plot test#############################################################
+newdf<-df_TPM[,2:4]+1
 
 ggplot(data=stack(newdf), aes(x=ind, y=(values))) + geom_crossbar(stat="summary", fun.y=data_summary, fun.ymax=getlogmax, fun.ymin=getlogmin,inherit.aes = TRUE)+ geom_hline(aes(yintercept = log(mean(values))),size=1)  
 
 #toplot meanlines
-meanlines<-log(as.data.frame((apply((newdf),MARGIN=2,FUN=mean))))
+meanlines<-log((as.data.frame((apply((df_s),MARGIN=2,FUN=mean)))))
 names(meanlines)<-c("value")
+meanlines[is.na(meanlines)] <- 0
 meanlines<-meanlines%>%mutate(num=row_number(value))
-
-ggplot(data=stack(newdf), aes(x=ind, y=(values))) + geom_crossbar(stat="summary", fun.y=data_summary, fun.ymax=getlogmax, fun.ymin=getlogmin)+geom_segment(data=meanlines,aes(x=num-0.45,xend=num+0.45,y=value,yend=value),inherit.aes=FALSE,color="Red",size=1.5)
-
-ggplot(data=stack(newdf), aes(x=ind, y=log(values))) +   geom_violin() 
+meanlines$num<-as.numeric(rownames(meanlines))
+#3rd qt
+q3Lines<-log(as.data.frame((apply((newdf),MARGIN=2,FUN=qt3))))
+names(q3Lines)<-c("value")
+q3Lines[is.na(q3Lines)] <- 0
+q3Lines<-q3Lines%>%mutate(num=row_number(value))
+q3Lines$num<-as.numeric(rownames(q3Lines))
+ggplot(data=stack(newdf), aes(x=ind, y=(values))) + geom_crossbar(stat="summary", fun.y=data_summary, fun.ymax=getlogmax, fun.ymin=getlogmin)+geom_segment(data=meanlines,aes(x=num-0.45,xend=num+0.45,y=value,yend=value),inherit.aes=FALSE,color="Red",size=1.5)+geom_segment(data=q3Lines,aes(x=num-0.45,xend=num+0.45,y=value,yend=value),inherit.aes=FALSE,color="Green",size=1.5)+scale_y_continuous(breaks=seq(0,20,1))
+######################################################################################
 
 ##################Plot to File#################################
-
-plotlist = list()
-k=1
-for(i in seq(2, dim(df_TPM)[2], by = 200)){
-  df_s<-df_TPM[,c(i:min(i+200,dim(df_TPM)[2]))]+1
-  #toplot meanlines
-  meanlines<-log((as.data.frame((apply((df_s),MARGIN=2,FUN=mean)))))
-  names(meanlines)<-c("value")
-  meanlines[is.na(meanlines)] <- 0
-  meanlines<-meanlines%>%mutate(num=row_number(value))
-  meanlines$num<-as.numeric(rownames(meanlines))
-  p<-ggplot(data=stack(df_s), aes(x=ind, y=(values))) + geom_crossbar(stat="summary", fun.y=data_summary, fun.ymax=getlogmax, fun.ymin=getlogmin)+geom_segment(data=meanlines,aes(x=num-0.25,xend=num+0.25,y=value,yend=value),inherit.aes=FALSE,color="Red",size=1.5) +theme(axis.text.x = element_text(angle = 90, hjust = 1))
-  plotlist[[k]]=p
-  k=k+1
-}
-
-pdf("RawTPMPlots.pdf")
-for (i in 1:length(plotlist)){
-  write(i, stderr())
-  print(plotlist[[i]])
-}
-dev.off()
 
 #sort by depth and plot
 bases <- read_delim("bases.txt", "\t", escape_double = FALSE,trim_ws = TRUE)
 bases<-bases %>% mutate(srr=paste("TPM_",run_accession,sep = ""))
 bases <- bases[bases$srr %in% names(df_TPM),]
 bases <- bases[order(bases$bases),]
-
-
-df_TPM_sorted<-df_TPM[,c('Name',bases$srr)]
-
-plotlist = list()
-k=1
-for(i in seq(2, dim(df_TPM_sorted)[2], by = 200)){
-  df_s<-df_TPM_sorted[,c(i:min(i+200,dim(df_TPM_sorted)[2]))]+1 #add 1 to avoid inf
-  meanlines<-log((as.data.frame((apply((df_s),MARGIN=2,FUN=mean)))))
-  names(meanlines)<-c("value")
-  meanlines[is.na(meanlines)] <- 0
-  meanlines<-meanlines%>%mutate(num=row_number(value))
-  meanlines$num<-as.numeric(rownames(meanlines))
-  p<-ggplot(data=stack(df_s), aes(x=ind, y=(values))) + geom_crossbar(stat="summary", fun.y=data_summary, fun.ymax=getlogmax, fun.ymin=getlogmin)+geom_segment(data=meanlines,aes(x=num-0.25,xend=num+0.25,y=value,yend=value),inherit.aes=FALSE,color="Red",size=1.5) +theme(axis.text.x = element_text(angle = 90, hjust = 1))
-  plotlist[[k]]=p
-  k=k+1
-}
-
-pdf("RawTPMPSortedBase.pdf")
-for (i in 1:length(plotlist)){
-  write(i, stderr())
-  print(plotlist[[i]])
-}
-dev.off()
-
+df_TPM<-df_TPM[,c('Name',bases$srr)]
+#plot
+plotnSave(df_TPM_sorted,2,200,"RawTPMPSortedBase.pdf")
+plotnSave(df_TPM_sorted,2,50,"RawTPMPSortedBase_50.pdf")
 ###separate tpms of Ens genes and others
-
 enstNames<-df_TPM$Name[(grepl("ENST",df_TPM$Name))]
-
 df_TPM_enst<-df_TPM[df_TPM$Name %in% enstNames,]
-
 df_TPM_nonenst<-df_TPM[!(df_TPM$Name %in% enstNames),]
 #sort by bases
 df_TPM_enst<-df_TPM_enst[,c('Name',bases$srr)]
 df_TPM_nonenst<-df_TPM_nonenst[,c('Name',bases$srr)]
-
-plotlist = list()
-k=1
-for(i in seq(2, dim(df_TPM_enst)[2], by = 50)){
-  df_s<-df_TPM_enst[,c(i:min(i+50,dim(df_TPM_enst)[2]))]+1
-  meanlines<-log((as.data.frame((apply((df_s),MARGIN=2,FUN=mean)))))
-  names(meanlines)<-c("value")
-  meanlines[is.na(meanlines)] <- 0
-  meanlines<-meanlines%>%mutate(num=row_number(value))
-  meanlines$num<-as.numeric(rownames(meanlines))
-  p<-ggplot(data=stack(df_s), aes(x=ind, y=(values))) + geom_crossbar(stat="summary", fun.y=data_summary, fun.ymax=getlogmax, fun.ymin=getlogmin)+geom_segment(data=meanlines,aes(x=num-0.25,xend=num+0.25,y=value,yend=value),inherit.aes=FALSE,color="Red",size=1.5) +theme(axis.text.x = element_text(angle = 90, hjust = 1))
-  plotlist[[k]]=p
-  k=k+1
-}
-pdf("RawTPMPlots_Enst_50.pdf")
-for (i in 1:length(plotlist)){
-  write(i, stderr())
-  print(plotlist[[i]])
-}
-dev.off()
-
+plotnSave(df_TPM_enst,2,200,"RawTPMPlots_Enst.pdf")
+plotnSave(df_TPM_enst,2,50,"RawTPMPlots_Enst_50.pdf")
 #plot non enst
-plotlist = list()
-k=1
-for(i in seq(2, dim(df_TPM_nonenst)[2], by = 50)){
-  df_s<-df_TPM_nonenst[,c(i:min(i+50,dim(df_TPM_nonenst)[2]))]+1
-  meanlines<-log((as.data.frame((apply((df_s),MARGIN=2,FUN=mean)))))
-  names(meanlines)<-c("value")
-  meanlines[is.na(meanlines)] <- 0
-  meanlines<-meanlines%>%mutate(num=row_number(value))
-  meanlines$num<-as.numeric(rownames(meanlines))
-  p<-ggplot(data=stack(df_s), aes(x=ind, y=(values))) + geom_crossbar(stat="summary", fun.y=data_summary, fun.ymax=getlogmax, fun.ymin=getlogmin)+geom_segment(data=meanlines,aes(x=num-0.25,xend=num+0.25,y=value,yend=value),inherit.aes=FALSE,color="Red",size=1.5) +theme(axis.text.x = element_text(angle = 90, hjust = 1))
-  plotlist[[k]]=p
-  k=k+1
-}
-pdf("RawTPMPlots_NonEnst_50.pdf")
-for (i in 1:length(plotlist)){
-  write(i, stderr())
-  print(plotlist[[i]])
-}
-dev.off()
+plotnSave(df_TPM_nonenst,2,200,"RawTPMPlots_NonEnst.pdf")
+plotnSave(df_TPM_nonenst,2,50,"RawTPMPlots_NonEnst_50.pdf")
 
 
-
-############normalize###################
+#################################################################normalize##################################################################
 gene <- read.csv("transcript_names.txt")
 #Define the gene name if your transcript name is different from gene name
 tx2gene <- data.frame(GENEID=gene,TXNAME=gene)
 #import run ID (SRR)
 run <- read.csv("runs.txt",header=F)
 #remove with na values
-run<- as.data.frame(run$V1[ !(run$V1 %in% c("SRR363862","SRR363862"))])
+run<- as.data.frame(run$V1[ !(run$V1 %in% c("SRR363862","SRR2723895"))])
 names(run)<-c("V1")
 IDLIST <- as.character(run$V1)
 file <- paste(IDLIST,"",sep="")
@@ -201,7 +166,22 @@ txi.salmon <- tximport(file, type = "salmon", txOut = TRUE, tx2gene = tx2gene, i
 
 ##using egder
 cts <- txi.salmon$counts
-normMat <- txi.salmon$length
+lengths<-txi.salmon$length
+length(rownames(cts))
+length(unique(rownames(cts)))
+#from cts aggregate repeated value of ENST00000378936
+ctsNew<- as.matrix(t(colSums(cts[rownames(cts)%in% c("ENST00000378936"),])))
+rownames(ctsNew)<-c("ENST00000378936")
+cts_removed<-cts[!(rownames(cts)%in% c("ENST00000378936")),]
+cts<-rbind(cts_removed,ctsNew)
+#remove extra len frm lengths
+lensNew<- as.matrix(t(colSums(lengths[rownames(lengths)%in% c("ENST00000378936"),])))
+rownames(lensNew)<-c("ENST00000378936")
+lens_removed<-lengths[!(rownames(lengths)%in% c("ENST00000378936")),]
+lengths<-rbind(lens_removed,lensNew)
+dim(lengths)
+
+normMat <- lengths
 normMat <- normMat/exp(rowMeans(log(normMat)))
 
 o <- log(calcNormFactors(cts/normMat)) + log(colSums(cts/normMat))
@@ -237,25 +217,50 @@ boxplot(sampexp_norm)
 #using noiseq
 head(cts)
 myfactors<-run
+#read gene lengths
+mylength <- read_delim("SRR073758", "\t", escape_double = FALSE, col_types = cols(EffectiveLength = col_skip(), NumReads = col_skip(), TPM = col_skip()), 
+                        trim_ws = TRUE)
+ml<-as.data.frame(t(mylength[,-1]))
+colnames(ml)<-mylength$Name
+head(ml[,1:4])
+
+
 nsData<-readData(data = cts,factors = myfactors)
-#### ENST00000378936 is duplicated##########
-length(rownames(cts))
-length(unique(rownames(cts)))
-#sum the repeated transcript
-t(sapply(by(cts,rownames(cts),colSums),identity))
+
+myTMM <- tmm(assayData(nsData)$exprs, long = ml, lc = 0)
+myTMM_default <- tmm(assayData(nsData)$exprs, long = 1000, lc = 0, k = 0, refColumn = 1, logratioTrim = 0.3, sumTrim = 0.05, doWeighting = TRUE, Acutoff = -1e+10)
+myUQUA = uqua(assayData(nsData)$exprs)
+myRPKM = rpkm(assayData(nsData)$exprs, long = ml, k = 0, lc = 1)
+
+dim(myTMM)
+dim(myTMM_default)
+dim(myUQUA)
+dim(myRPKM)
+head(myTMM,2)
+head(myUQUA,2)
+head(myRPKM,2)
 
 
 
+#plot graphs
+#plot non enst
+thisDF<-as.data.frame(myTMM_default)
+#sort by bases
+basesRemoved<-bases$run_accession[which(!(bases$run_accession %in% c("SRR363862","SRR2723895")))]
+thisDF<-thisDF[,c(basesRemoved)]
 
+plotnSave(thisDF,1,200,"TMMdefaulf.pdf")
+plotnSave(thisDF,1,50,"TMMdefaulf_50.pdf")
 
+#plot enst and other
+thisDF_enst<-thisDF[rownames(thisDF) %in% enstNames,]
+thisDF_nonenst<-thisDF[!(rownames(thisDF) %in% enstNames),]
+plotnSave(thisDF_enst,1,200,"TMMdefaulf_ENST.pdf")
+plotnSave(thisDF_enst,1,50,"TMMdefaulf_ENST_50.pdf")
+plotnSave(thisDF_nonenst,1,200,"TMMdefaulf_nonENST.pdf")
+plotnSave(thisDF_nonenst,1,50,"TMMdefaulf_nonENST_50.pdf")
 
-
-
-
-
-
-
-
-
-
+log(mean(dthisDF_nonenst$SRR2735916+1))
+log(mean(dthisDF_enst$SRR2121909))
+log(mean(df_s$SRR2121909))
 
