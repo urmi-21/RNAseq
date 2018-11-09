@@ -15,6 +15,36 @@ memory.limit(size=56000)
 
 ########################Function defns############################################################
 
+plotAM<-function(twoCtsdf){
+  M<-c()
+  A<-c()
+  for(i in 1:length(counts1)){
+    r1<-(counts1[i]/N1)
+    r2<-(counts2[i]/N2)
+    
+    thisM<-log2(r1/r2)
+    M<-c(M,thisM)
+    thisA<-0.5*(log2(r1*r2))
+    A<-c(A,thisA)
+  }
+  
+  print("loopover")
+  
+  dfAM<-as.data.frame(t(rbind(A,M)))
+  
+  ggplot(data=dfAM,aes(x=A,y=M))+geom_point()
+}
+
+plotAM<-function(twoCtsdf){
+  
+  N1<-sum(twoCtsdf[,1])
+  N2<-sum(twoCtsdf[,2])
+  names(twoCtsdf)<-c("c1","c2")
+  twoCtsdf<-twoCtsdf %>% mutate(M = log2((c1/N1)/(c2/N2)))
+  twoCtsdf<-twoCtsdf %>% mutate(A = 0.5*log2((c1/N1)*(c2/N2)))
+  ggplot(data=twoCtsdf,aes(x=A,y=M))+geom_point()
+}
+
 plotnSave<-function(expdf,start,x,fname){
   #expdf df object
   #start start from this column, start=1 if there are no non data columns
@@ -127,11 +157,13 @@ ggplot(data=stack(newdf), aes(x=ind, y=(values))) + geom_crossbar(stat="summary"
 
 ##################Plot to File#################################
 
-#sort by depth and plot
+#sort by depth and plot,read bases info
 bases <- read_delim("bases.txt", "\t", escape_double = FALSE,trim_ws = TRUE)
 bases<-bases %>% mutate(srr=paste("TPM_",run_accession,sep = ""))
 bases <- bases[bases$srr %in% names(df_TPM),]
+#bases <- bases[bases$srr %in% names(ctsdf),]
 bases <- bases[order(bases$bases),]
+
 df_TPM<-df_TPM[,c('Name',bases$srr)]
 #plot
 plotnSave(df_TPM_sorted,2,200,"RawTPMPSortedBase.pdf")
@@ -156,7 +188,7 @@ gene <- read.csv("transcript_names.txt")
 tx2gene <- data.frame(GENEID=gene,TXNAME=gene)
 #import run ID (SRR)
 run <- read.csv("runs.txt",header=F)
-#remove with na values
+#remove runs with na values
 run<- as.data.frame(run$V1[ !(run$V1 %in% c("SRR363862","SRR2723895"))])
 names(run)<-c("V1")
 IDLIST <- as.character(run$V1)
@@ -174,13 +206,37 @@ ctsNew<- as.matrix(t(colSums(cts[rownames(cts)%in% c("ENST00000378936"),])))
 rownames(ctsNew)<-c("ENST00000378936")
 cts_removed<-cts[!(rownames(cts)%in% c("ENST00000378936")),]
 cts<-rbind(cts_removed,ctsNew)
+cts_removed<-NULL
+ctsNew<-NULL
 #remove extra len frm lengths
 lensNew<- as.matrix(t(colSums(lengths[rownames(lengths)%in% c("ENST00000378936"),])))
 rownames(lensNew)<-c("ENST00000378936")
 lens_removed<-lengths[!(rownames(lengths)%in% c("ENST00000378936")),]
 lengths<-rbind(lens_removed,lensNew)
+lens_removed<-NULL
+lensNew<-NULL
 dim(lengths)
 
+#plot dist of raw counts by bases
+ctsdf<-as.data.frame(cts)
+
+#remove excluded cols from bases
+#if bases not in memory
+bases <- read_delim("bases.txt", "\t", escape_double = FALSE,trim_ws = TRUE)
+bases<-bases %>% mutate(srr=paste("TPM_",run_accession,sep = ""))
+bases <- bases[bases$run_accession %in% names(ctsdf),]
+bases <- bases[order(bases$bases),]
+basesRemoved<-bases[which(!(bases$run_accession %in% c("SRR363862","SRR2723895"))),]
+#sort by bases
+ctsdf<-ctsdf[,c(basesRemoved$run_accession)]
+
+#plot estimated counts
+plotnSave(ctsdf,1,200,"Counts.pdf")
+plotnSave(ctsdf,1,50,"Counts_50.pdf")
+
+###################################################################################################
+
+###########Start normalization#####################################################################
 normMat <- lengths
 normMat <- normMat/exp(rowMeans(log(normMat)))
 
@@ -205,11 +261,12 @@ head(yNFuq$samples)
 
 ##example of norffactors
 sampexp <- matrix( rpois(10000, lambda=5), nrow=100 )
-snf<-calcNormFactors(sampexp)
-sampexp_norm<-sampexp %*% diag(snf)
+snf<-calcNormFactors(sampexp,refColumn=1,logratioTrim=0.5,sumTrim=0.5,doWeighting = TRUE, Acutoff = -1e+10)
+sampexp_norm<-sampexp %*% diag(sqrt(snf))
+par(mfrow=c(1,2))
 boxplot(sampexp)
 boxplot(sampexp_norm)
-
+par(mfrow=c(1,1))
 
 
 
@@ -263,4 +320,10 @@ plotnSave(thisDF_nonenst,1,50,"TMMdefaulf_nonENST_50.pdf")
 log(mean(dthisDF_nonenst$SRR2735916+1))
 log(mean(dthisDF_enst$SRR2121909))
 log(mean(df_s$SRR2121909))
+
+
+
+#plot A vs M values
+plotAM(ctsdf[,190:191])
+
 
