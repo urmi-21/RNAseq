@@ -16,33 +16,27 @@ memory.limit(size=56000)
 ########################Function defns############################################################
 
 plotAM<-function(twoCtsdf){
-  M<-c()
-  A<-c()
-  for(i in 1:length(counts1)){
-    r1<-(counts1[i]/N1)
-    r2<-(counts2[i]/N2)
-    
-    thisM<-log2(r1/r2)
-    M<-c(M,thisM)
-    thisA<-0.5*(log2(r1*r2))
-    A<-c(A,thisA)
-  }
-  
-  print("loopover")
-  
-  dfAM<-as.data.frame(t(rbind(A,M)))
-  
-  ggplot(data=dfAM,aes(x=A,y=M))+geom_point()
-}
-
-plotAM<-function(twoCtsdf){
-  
+ 
+  names(twoCtsdf)<-c("c1","c2")
   N1<-sum(twoCtsdf[,1])
   N2<-sum(twoCtsdf[,2])
-  names(twoCtsdf)<-c("c1","c2")
+  twoCtsdf$rn<-rownames(ctsdf)
+  
+  
+  
+  z1=which(twoCtsdf$c1==0)
+  z2=which(twoCtsdf$c2==0)
+  z1<-union(z1,z2)
+  twoCtsdf<-twoCtsdf[-z1,]
+  
   twoCtsdf<-twoCtsdf %>% mutate(M = log2((c1/N1)/(c2/N2)))
   twoCtsdf<-twoCtsdf %>% mutate(A = 0.5*log2((c1/N1)*(c2/N2)))
-  ggplot(data=twoCtsdf,aes(x=A,y=M))+geom_point()
+  
+  twoCtsdf<-twoCtsdf %>% mutate(source = ifelse(grepl("ENST", rn),"ENST","NONENST"))
+  twoCtsdf<-twoCtsdf %>% group_by(rn) %>% mutate(id= unlist(strsplit(rn, "[.]"))[1])
+  twoCtsdf<-twoCtsdf %>% mutate(HS = ifelse(id %in% humanHS$`Transcript stable ID`,"HS", ifelse(source == "ENST" ,"NONHS", "NONENST")))
+  
+  ggplot(data=twoCtsdf%>%filter(HS=="NONHS"|HS=="NONENST"),aes(x=A,y=M,color=HS))+geom_point(alpha = 0.2)
 }
 
 plotnSave<-function(expdf,start,x,fname){
@@ -234,6 +228,8 @@ ctsdf<-ctsdf[,c(basesRemoved$run_accession)]
 plotnSave(ctsdf,1,200,"Counts.pdf")
 plotnSave(ctsdf,1,50,"Counts_50.pdf")
 
+enstNames<-rownames(ctsdf)[(grepl("ENST",rownames(ctsdf)))]
+nonenstNames<-rownames(ctsdf)[(grepl("ENST",rownames(ctsdf)))]
 ###################################################################################################
 
 ###########Start normalization#####################################################################
@@ -325,5 +321,13 @@ log(mean(df_s$SRR2121909))
 
 #plot A vs M values
 plotAM(ctsdf[,190:191])
+plotAM(ctsdf[,c(19,71)])
 
+
+
+
+
+
+#read human HS genes/tx names
+humanHS <- read_delim("humanHS.txt", "\t",escape_double = FALSE, trim_ws = TRUE)
 
