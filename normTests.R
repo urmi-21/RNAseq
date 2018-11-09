@@ -16,12 +16,44 @@ memory.limit(size=56000)
 ########################Function defns############################################################
 
 plotAM<-function(twoCtsdf){
- 
+  #twoCtsdf<-ctsdf[,c(191,19)]
+  #twoCtsdf<-twoCtsdf+1
   names(twoCtsdf)<-c("c1","c2")
   N1<-sum(twoCtsdf[,1])
   N2<-sum(twoCtsdf[,2])
   twoCtsdf$rn<-rownames(ctsdf)
   
+  z1=which(twoCtsdf$c1==0)
+  z2=which(twoCtsdf$c2==0)
+  z1<-union(z1,z2)
+  twoCtsdf<-twoCtsdf[-z1,]
+  
+  twoCtsdf<-twoCtsdf %>% mutate(M = log2((c1/N1)/(c2/N2)))
+  twoCtsdf<-twoCtsdf %>% mutate(A = 0.5*log2((c1/N1)*(c2/N2)))
+  
+  twoCtsdf<-twoCtsdf %>% mutate(source = ifelse(grepl("ENST", rn),"ENST","NONENST"))
+  twoCtsdf<-twoCtsdf %>% group_by(rn) %>% mutate(id= unlist(strsplit(rn, "[.]"))[1])
+  twoCtsdf<-twoCtsdf %>% mutate(HS = ifelse(id %in% humanHS$`Transcript stable ID`,"HS", ifelse(source == "ENST" ,"NONHS", "NONENST")))
+  s2<-as.matrix(twoCtsdf[,1:2])
+  nf<-calcNormFactors(s2)
+  ggplot(data=twoCtsdf%>%filter(HS=="HS"|HS=="NONENST"),aes(x=A,y=M,color=HS))+geom_point(alpha = 0.5)+geom_hline(yintercept = log2(nf[1]),color="Red")+geom_hline(yintercept = log2(nf[2]),color="Green")
+  
+  
+}
+
+plotAMcpm<-function(twoCtsdf){
+ # twoCtsdf<-ctsdf[,c(191,19)]
+  names(twoCtsdf)<-c("rawc1","rawc2")
+  #correct counts
+  s3<-DGEList(as.matrix(twoCtsdf[,c("rawc1","rawc2")]))
+  rawCPM<-as.data.frame(cpm(s3))
+  head(rawCPM)
+  twoCtsdf$c1<-rawCPM$rawc1
+  twoCtsdf$c2<-rawCPM$rawc2
+  
+  N1<-sum(twoCtsdf$c1)
+  N2<-sum(twoCtsdf$c2)
+  twoCtsdf$rn<-rownames(ctsdf)
   
   
   z1=which(twoCtsdf$c1==0)
@@ -36,7 +68,31 @@ plotAM<-function(twoCtsdf){
   twoCtsdf<-twoCtsdf %>% group_by(rn) %>% mutate(id= unlist(strsplit(rn, "[.]"))[1])
   twoCtsdf<-twoCtsdf %>% mutate(HS = ifelse(id %in% humanHS$`Transcript stable ID`,"HS", ifelse(source == "ENST" ,"NONHS", "NONENST")))
   
-  ggplot(data=twoCtsdf%>%filter(HS=="NONHS"|HS=="NONENST"),aes(x=A,y=M,color=HS))+geom_point(alpha = 0.2)
+  nf<-calcNormFactors(s3)
+  ggplot(data=twoCtsdf%>%filter(HS=="HS"|HS=="NONENST"),aes(x=A,y=M,color=HS))+geom_point(alpha = 0.5)+geom_hline(yintercept = log2(nf$samples$norm.factors[1]),color="Red")+geom_hline(yintercept = log2(nf$samples$norm.factors[2]),color="Green")
+  
+  # #nf contains normalising factors
+  # twoCtsdf<-as.data.frame(cpm(nf))
+  # names(twoCtsdf)<-c("c1","c2")
+  # twoCtsdf$rn<-rownames(ctsdf)
+  # N1<-sum(twoCtsdf$c1)
+  # N2<-sum(twoCtsdf$c2)
+  # z1=which(twoCtsdf$c1==0)
+  # z2=which(twoCtsdf$c2==0)
+  # z1<-union(z1,z2)
+  # twoCtsdf<-twoCtsdf[-z1,]
+  # 
+  # twoCtsdf<-twoCtsdf %>% mutate(M = log2((c1/N1)/(c2/N2)))
+  # twoCtsdf<-twoCtsdf %>% mutate(A = 0.5*log2((c1/N1)*(c2/N2)))
+  # 
+  # twoCtsdf<-twoCtsdf %>% mutate(source = ifelse(grepl("ENST", rn),"ENST","NONENST"))
+  # twoCtsdf<-twoCtsdf %>% group_by(rn) %>% mutate(id= unlist(strsplit(rn, "[.]"))[1])
+  # twoCtsdf<-twoCtsdf %>% mutate(HS = ifelse(id %in% humanHS$`Transcript stable ID`,"HS", ifelse(source == "ENST" ,"NONHS", "NONENST")))
+  # 
+  # nf<-calcNormFactors(s3)
+  # ggplot(data=twoCtsdf%>%filter(HS=="NONHS"|HS=="NONENST"),aes(x=A,y=M,color=HS))+geom_point(alpha = 0.5)+geom_hline(yintercept = log2(nf$samples$norm.factors[1]),color="Red")+geom_hline(yintercept = log2(nf$samples$norm.factors[2]),color="Green")
+  # 
+  
 }
 
 plotnSave<-function(expdf,start,x,fname){
@@ -256,7 +312,7 @@ yNFuq <- calcNormFactors(y,method="upperquartile")
 head(yNFuq$samples)
 
 ##example of norffactors
-sampexp <- matrix( rpois(10000, lambda=5), nrow=100 )
+sampexp <- matrix( rpois(200, lambda=5), nrow=100 )
 snf<-calcNormFactors(sampexp,refColumn=1,logratioTrim=0.5,sumTrim=0.5,doWeighting = TRUE, Acutoff = -1e+10)
 sampexp_norm<-sampexp %*% diag(sqrt(snf))
 par(mfrow=c(1,2))
@@ -320,8 +376,11 @@ log(mean(df_s$SRR2121909))
 
 
 #plot A vs M values
+twoCtsdf<-NULL
 plotAM(ctsdf[,190:191])
-plotAM(ctsdf[,c(19,71)])
+plotAM(ctsdf[,c(191,29)])
+twoCtsdf<-NULL
+plotAMcpm(ctsdf[,c(191,29)])
 
 
 
