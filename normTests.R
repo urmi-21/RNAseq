@@ -14,6 +14,9 @@ memory.limit(size=56000)
 
 
 ########################Function defns############################################################
+#read human HS genes/tx names
+humanHS <- read_delim("humanHS.txt", "\t",escape_double = FALSE, trim_ws = TRUE)
+
 
 plotAM<-function(twoCtsdf){
   #twoCtsdf<-ctsdf[,c(191,19)]
@@ -36,7 +39,7 @@ plotAM<-function(twoCtsdf){
   twoCtsdf<-twoCtsdf %>% mutate(HS = ifelse(id %in% humanHS$`Transcript stable ID`,"HS", ifelse(source == "ENST" ,"NONHS", "NONENST")))
   s2<-as.matrix(twoCtsdf[,1:2])
   nf<-calcNormFactors(s2)
-  ggplot(data=twoCtsdf%>%filter(HS=="HS"|HS=="NONENST"),aes(x=A,y=M,color=HS))+geom_point(alpha = 0.5)+geom_hline(yintercept = log2(nf[1]),color="Red")+geom_hline(yintercept = log2(nf[2]),color="Green")
+  ggplot(data=twoCtsdf%>%filter(HS=="HS"|HS=="NONENST"|HS=="NONHS"),aes(x=A,y=M,color=HS))+geom_point(alpha = 0.5)+geom_hline(yintercept = log2(nf[1]),color="Red")+geom_hline(yintercept = log2(nf[2]),color="Green")
   
   
 }
@@ -69,7 +72,7 @@ plotAMcpm<-function(twoCtsdf){
   twoCtsdf<-twoCtsdf %>% mutate(HS = ifelse(id %in% humanHS$`Transcript stable ID`,"HS", ifelse(source == "ENST" ,"NONHS", "NONENST")))
   
   nf<-calcNormFactors(s3)
-  ggplot(data=twoCtsdf%>%filter(HS=="HS"|HS=="NONENST"),aes(x=A,y=M,color=HS))+geom_point(alpha = 0.5)+geom_hline(yintercept = log2(nf$samples$norm.factors[1]),color="Red")+geom_hline(yintercept = log2(nf$samples$norm.factors[2]),color="Green")
+  ggplot(data=twoCtsdf%>%filter(HS=="HS"|HS=="NONENST"| HS=="NONHS"),aes(x=A,y=M,color=HS))+geom_point(alpha = 0.5)+geom_hline(yintercept = log2(nf$samples$norm.factors[1]),color="Red")+geom_hline(yintercept = log2(nf$samples$norm.factors[2]),color="Green")
   
   # #nf contains normalising factors
   # twoCtsdf<-as.data.frame(cpm(nf))
@@ -285,7 +288,7 @@ plotnSave(ctsdf,1,200,"Counts.pdf")
 plotnSave(ctsdf,1,50,"Counts_50.pdf")
 
 enstNames<-rownames(ctsdf)[(grepl("ENST",rownames(ctsdf)))]
-nonenstNames<-rownames(ctsdf)[(grepl("ENST",rownames(ctsdf)))]
+nonenstNames<-rownames(ctsdf)[!(grepl("ENST",rownames(ctsdf)))]
 ###################################################################################################
 
 ###########Start normalization#####################################################################
@@ -338,6 +341,8 @@ nsData<-readData(data = cts,factors = myfactors)
 
 myTMM <- tmm(assayData(nsData)$exprs, long = ml, lc = 0)
 myTMM_default <- tmm(assayData(nsData)$exprs, long = 1000, lc = 0, k = 0, refColumn = 1, logratioTrim = 0.3, sumTrim = 0.05, doWeighting = TRUE, Acutoff = -1e+10)
+myTMM_param <- tmm(assayData(nsData)$exprs, long = 1000, lc = 0, k = 0, refColumn = 191, logratioTrim = 0.1, sumTrim = 0.05, doWeighting = TRUE, Acutoff = -1e+10)
+
 myUQUA = uqua(assayData(nsData)$exprs)
 myRPKM = rpkm(assayData(nsData)$exprs, long = ml, k = 0, lc = 1)
 
@@ -353,40 +358,58 @@ head(myRPKM,2)
 
 #plot graphs
 #plot non enst
-thisDF<-as.data.frame(myTMM_default)
+thisDF<-as.data.frame(myTMM_param)
 #sort by bases
 basesRemoved<-bases$run_accession[which(!(bases$run_accession %in% c("SRR363862","SRR2723895")))]
 thisDF<-thisDF[,c(basesRemoved)]
 
-plotnSave(thisDF,1,200,"TMMdefaulf.pdf")
-plotnSave(thisDF,1,50,"TMMdefaulf_50.pdf")
+plotnSave(thisDF,1,200,"TMMparam2_10p.pdf")
+plotnSave(thisDF,1,50,"TMMparam2_10p_50.pdf")
 
 #plot enst and other
 thisDF_enst<-thisDF[rownames(thisDF) %in% enstNames,]
 thisDF_nonenst<-thisDF[!(rownames(thisDF) %in% enstNames),]
-plotnSave(thisDF_enst,1,200,"TMMdefaulf_ENST.pdf")
-plotnSave(thisDF_enst,1,50,"TMMdefaulf_ENST_50.pdf")
-plotnSave(thisDF_nonenst,1,200,"TMMdefaulf_nonENST.pdf")
-plotnSave(thisDF_nonenst,1,50,"TMMdefaulf_nonENST_50.pdf")
+plotnSave(thisDF_enst,1,200,"TMMdparam2_10p_ENST.pdf")
+plotnSave(thisDF_enst,1,50,"TMMparam2_10p_ENST_50.pdf")
+plotnSave(thisDF_nonenst,1,200,"TMMparam2_10p_nonENST.pdf")
+plotnSave(thisDF_nonenst,1,50,"TMMparam2_10p_nonENST_50.pdf")
 
 log(mean(dthisDF_nonenst$SRR2735916+1))
 log(mean(dthisDF_enst$SRR2121909))
 log(mean(df_s$SRR2121909))
 
+#correct batch effect
+mydata2corr = ARSyNseq(nsData, factor = NULL, batch = FALSE, norm = "tmm", logtransf = FALSE)
 
 
 #plot A vs M values
 twoCtsdf<-NULL
-plotAM(ctsdf[,190:191])
+plotAM(ctsdf[,190:1])
 plotAM(ctsdf[,c(191,29)])
 twoCtsdf<-NULL
-plotAMcpm(ctsdf[,c(191,29)])
+plotAM(ctsdf[,c(191,1)])
+
+#nonenst mean greatest in 159, enst in 191
+plotAM(ctsdf[,c(191,159)])
 
 
 
 
+#plot heat map for nonenst genes
+#thisDF_nonenst$rn<-rownames(thisDF_nonenst)
+
+ggplot(data = thisDF_nonenst, aes( y = rn)) + geom_tile() +  scale_fill_gradient2() +  theme(axis.text.y = element_text(size = 6))
+
+heatmap(as.matrix(thisDF_nonenst))
+
+#pdf("hmap_nonenst_tmm.pdf")
+heatmap(as.matrix(thisDF_nonenst[1:200,1:50]), Rowv=NA, Colv=NA, col = heat.colors(256), scale="column", margins=c(5,10))
+#dev.off()
+heatmap(as.matrix(thisDF_enst[1:200,1:50]), Rowv=NA, Colv=NA, col = heat.colors(256), scale="column", margins=c(5,10))
+
+heatmap(as.matrix(thisDF[11100:11200,50:100]), Rowv=NA, Colv=NA, scale="none", col = cm.colors(256),margins=c(5,10))
 
 
-#read human HS genes/tx names
-humanHS <- read_delim("humanHS.txt", "\t",escape_double = FALSE, trim_ws = TRUE)
+#find highest mean for cols in nonenst
+
 
