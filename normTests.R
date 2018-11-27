@@ -39,7 +39,7 @@ plotAM<-function(twoCtsdf){
   twoCtsdf<-twoCtsdf %>% mutate(HS = ifelse(id %in% humanHS$`Transcript stable ID`,"HS", ifelse(source == "ENST" ,"NONHS", "NONENST")))
   s2<-as.matrix(twoCtsdf[,1:2])
   nf<-calcNormFactors(s2)
-  ggplot(data=twoCtsdf%>%filter(HS=="HS"|HS=="NONENST"|HS=="NONHS"),aes(x=A,y=M,color=HS))+geom_point(alpha = 0.5)+geom_hline(yintercept = log2(nf[1]),color="Red")+geom_hline(yintercept = log2(nf[2]),color="Green")
+  ggplot(data=twoCtsdf%>%filter(HS=="HS"|HS=="NONENST"),aes(x=A,y=M,color=HS))+geom_point(alpha = 0.5)+geom_hline(yintercept = log2(nf[1]),color="Red")+geom_hline(yintercept = log2(nf[2]),color="Green")
   
   
 }
@@ -194,7 +194,7 @@ newdf<-df_TPM[,2:4]+1
 ggplot(data=stack(newdf), aes(x=ind, y=(values))) + geom_crossbar(stat="summary", fun.y=data_summary, fun.ymax=getlogmax, fun.ymin=getlogmin,inherit.aes = TRUE)+ geom_hline(aes(yintercept = log(mean(values))),size=1)  
 
 #toplot meanlines
-meanlines<-log((as.data.frame((apply((df_s),MARGIN=2,FUN=mean)))))
+meanlines<-log((as.data.frame((apply((newdf),MARGIN=2,FUN=mean)))))
 names(meanlines)<-c("value")
 meanlines[is.na(meanlines)] <- 0
 meanlines<-meanlines%>%mutate(num=row_number(value))
@@ -384,8 +384,8 @@ mydata2corr = ARSyNseq(nsData, factor = NULL, batch = FALSE, norm = "tmm", logtr
 
 #plot A vs M values
 twoCtsdf<-NULL
-plotAM(ctsdf[,190:1])
-plotAM(ctsdf[,c(191,29)])
+plotAM(ctsdf[,190:191])
+plotAM(ctsdf[,c(1,191)])
 twoCtsdf<-NULL
 plotAM(ctsdf[,c(191,1)])
 
@@ -413,3 +413,17 @@ heatmap(as.matrix(thisDF[11100:11200,50:100]), Rowv=NA, Colv=NA, scale="none", c
 #find highest mean for cols in nonenst
 
 
+
+
+
+#normalize with deseq
+library(DESeq2)
+#each run is indipendent
+sampleTable<-as.data.frame(colnames(txi.salmon$counts))
+colnames(sampleTable)<-"condition"
+dds <- DESeqDataSetFromTximport(txi.salmon, sampleTable, ~condition)
+
+dds2 <- DESeq(dds)
+
+res <- results(dds2)
+res
