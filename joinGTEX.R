@@ -35,4 +35,19 @@ gtexMerged <- read_excel("gtexMerged.xlsx")
 
 gtexMerged<-gtexMerged%>%mutate(portions.analytes.analyte_type=ifelse(grepl("RNA",SMNABTCHT),"RNA",ifelse(grepl("DNA",SMNABTCHT),"DNA","NA") ))
 
-write.csv(gtexMerged,"GTEX_merged_final.txt",row.names = F)
+#add age to be average of range
+#code ref: https://stackoverflow.com/questions/43635846/rcalculating-mean-for-every-n-values-from-a-vector
+BinMean <- function (vec, every, na.rm = FALSE) {
+  n <- length(vec)
+  x <- .colMeans(vec, every, n %/% every, na.rm)
+  r <- n %% every
+  if (r) x <- c(x, mean.default(vec[(n - r + 1):n], na.rm = na.rm))
+  x
+}
+gtexMerged<-gtexMerged%>%mutate(age=BinMean(as.numeric(unlist(strsplit(gtexMerged$AGE,"-"))),every = 2))
+
+#select cols
+colnames(gtexMerged)
+#<-gtexMerged[,-c("AGE" ,)]
+
+write.csv(gtexMerged,"GTEX_merged_final.csv",row.names = F)
