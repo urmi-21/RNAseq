@@ -27,3 +27,10 @@ t<-GTEXSA[,c("SUBJID","SAMPID")]
 joined<-left_join(GTEXSP,GTEXSA)
 
 write_tsv(joined,"GTEX_merged.txt")
+
+
+#add column analyte type R or D
+library(readxl)
+gtexMerged <- read_excel("gtexMerged.xlsx")
+
+gtexMerged<-gtexMerged%>%mutate(portions.analytes.analyte_type=ifelse(grepl("RNA",SMNABTCHT),"RNA",ifelse(grepl("DNA",SMNABTCHT),"DNA","NA") ))
