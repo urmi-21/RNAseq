@@ -34,3 +34,5 @@ library(readxl)
 gtexMerged <- read_excel("gtexMerged.xlsx")
 
 gtexMerged<-gtexMerged%>%mutate(portions.analytes.analyte_type=ifelse(grepl("RNA",SMNABTCHT),"RNA",ifelse(grepl("DNA",SMNABTCHT),"DNA","NA") ))
+
+write.csv(gtexMerged,"GTEX_merged_final.txt",row.names = F)
