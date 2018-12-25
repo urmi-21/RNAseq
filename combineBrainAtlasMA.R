@@ -17,7 +17,7 @@ colnames(MicroarrayExpression)[2:ncol(MicroarrayExpression)]<-SampleAnnot$well_i
 MicroarrayExpression_joined<-inner_join(Probes,MicroarrayExpression)
 
 sum(duplicated(colnames(MicroarrayExpression_joined)))
-
-write_tsv(MicroarrayExpression_joined,"JoinedData.tsv",col_names = F)
+names(MicroarrayExpression_joined)<-colnames(MicroarrayExpression_joined)
+write_tsv(MicroarrayExpression_joined,"JoinedData.tsv",col_names = TRUE)
 
 
