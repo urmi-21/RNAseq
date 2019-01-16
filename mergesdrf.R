@@ -42,3 +42,12 @@ df_sdrf_inData$Array_Data_File[duplicated(df_sdrf_inData$Array_Data_File)]
 
 #consolidate rows based on cel files
 df_sdrf_inData_noRep <- aggregate( .~ Array_Data_File, df_sdrf_inData, function(x) paste0(unique(x),collapse = ";"))
+
+
+#extract useful info
+keyWords<-c("source","organism","cell","disease","treatment","arrayexpress")
+
+colsToKeep<-grepl(paste(keyWords,collapse = "|"),colnames(df_sdrf_inData_noRep),ignore.case = T)
+
+df_sdrf_final<-df_sdrf_inData_noRep[,colsToKeep]
+
