@@ -45,9 +45,52 @@ df_sdrf_inData_noRep <- aggregate( .~ Array_Data_File, df_sdrf_inData, function(
 
 
 #extract useful info
-keyWords<-c("source","organism","cell","disease","treatment","arrayexpress")
+keyWords<-c("organism","cell","disease","treatment","arrayexpress","Array_Data_File")
 
 colsToKeep<-grepl(paste(keyWords,collapse = "|"),colnames(df_sdrf_inData_noRep),ignore.case = T)
 
+
 df_sdrf_final<-df_sdrf_inData_noRep[,colsToKeep]
+
+#order by col name
+df_sdrf_final<-df_sdrf_final[,colnames(df_sdrf_final)[order(colnames(df_sdrf_final))]]
+
+#merge column information
+df_sdrf_final[df_sdrf_final=="NA"]<-""
+
+#init new df
+test<-data.frame()
+test<-as.data.frame(df_sdrf_final[,"Characteristics [cell group]"])
+
+
+for(keyw in keyWords){
+print(keyw)
+thisColName<-paste(keyw,"Info",sep = "_")
+thisCols<-colnames(df_sdrf_final)[grepl(keyw,colnames(df_sdrf_final),ignore.case = T)]
+tempdf<-as.data.frame(df_sdrf_final[ , thisCols ])
+test[,thisColName] <- apply( tempdf , 1 , function(row) paste(row[nzchar(row)], collapse = ";") )
+
+}
+
+test<-test[,2:ncol(test)]
+
+
+
+
+
+write.csv(test,"combined_srdf_Summary.csv",row.names = F)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
