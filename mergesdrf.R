@@ -2,11 +2,6 @@ library(readr)
 library(magrittr)
 library(dplyr)
 library(purrr)
-library(data.table)
-
-#megre sdrf files downloaded from arrayexpress
-df_sdrf<-list.files(full.names = TRUE,path = "sdrfDir/", pattern = "*.txt") %>% lapply(read_tsv) %>% makeasChar %>% bind_rows()
-
 
 makeasChar<-function(listOfDF){
   t<-length(listOfDF)
@@ -16,4 +11,9 @@ makeasChar<-function(listOfDF){
   }
   return(listOfDF)
 }
+
+
+#megre sdrf files downloaded from arrayexpress
+df_sdrf<-list.files(full.names = TRUE,path = "sdrfDir/", pattern = "*.txt") %>% lapply(read_tsv) %>% makeasChar %>% bind_rows()
+
 
