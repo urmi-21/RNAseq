@@ -74,11 +74,36 @@ test[,thisColName] <- apply( tempdf , 1 , function(row) paste(row[nzchar(row)], 
 
 test<-test[,2:ncol(test)]
 
+#join accession
+colnames(sample_to_accession_human)<-c("Array_Data_File","Accession")
+sample_to_accession_human<-sample_to_accession_human[,c("Accession","Array_Data_File")]
+colnames(test)[which(colnames(test)=="Array_Data_File_Info")]<-"Array_Data_File"
+test<-full_join(sample_to_accession_human,test)
+#open batch information
+sample_to_batches_human <- read_delim("~/Downloads/Immuno-Navigator_datasets/human/sample_to_batches_human.txt", 
+                                      "\t", escape_double = FALSE, col_names = FALSE, 
+                                      trim_ws = TRUE)
+colnames(sample_to_batches_human)<-c("Array_Data_File","Batch")
+test<-full_join(test,sample_to_batches_human)
+#open celltype info
+sample_to_cell_types_human <- read_delim("~/Downloads/Immuno-Navigator_datasets/human/sample_to_cell_types_human.txt", 
+                                         "\t", escape_double = FALSE, col_names = FALSE, 
+                                         trim_ws = TRUE)
+colnames(sample_to_cell_types_human)<-c("Array_Data_File","CellType")
+test<-full_join(test,sample_to_cell_types_human)
+
+write_tsv(test,"combined_srdf_Summary.tsv")
 
 
 
 
-write.csv(test,"combined_srdf_Summary.csv",row.names = F)
+
+
+
+
+
+
+
 
 
 
