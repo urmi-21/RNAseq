@@ -51,7 +51,7 @@ if [ ${#failed_SRR[@]} -ne 0 ]; then
 
         while [ $a -lt 4 ]
         do
-                echo "Retrying failed downloads. Attemnp $a"
+                echo "Retrying failed downloads. Attempt $a"
                 #wait 5s before attempt
                 sleep 25
                 toremove=()
