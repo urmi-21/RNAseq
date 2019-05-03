@@ -1,2 +1,3 @@
 # RNAseq
-My scripts used in RNA-seq analysis
+
+A collection scripts/code snippets I wrote for RNA-seq analysis.
